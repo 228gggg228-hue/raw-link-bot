@@ -4,13 +4,12 @@ import requests
 from telebot import types
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# Хранилище ссылок по id сообщения
 links = {}
 
 def to_raw(u):
-    """Преобразует обычную ссылку в raw"""
     if "github.com" in u and "/blob/" in u:
         return u.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
     if "pastefy.app" in u and "/raw" not in u:
@@ -23,7 +22,6 @@ def to_raw(u):
     return u
 
 def from_raw(u):
-    """Преобразует raw-ссылку в обычную"""
     if "raw.githubusercontent.com" in u:
         p = u.split("/")
         return "https://github.com/" + p[3] + "/" + p[4] + "/blob/" + p[5] + "/" + "/".join(p[6:])
@@ -38,13 +36,29 @@ def from_raw(u):
     return u
 
 def fetch_text(u):
-    """Скачивает текст по ссылке"""
     try:
         r = requests.get(u, timeout=15)
         r.raise_for_status()
         return r.text
     except Exception as e:
-        return "Ошибка загрузки: " + str(e)
+        return None
+
+def upload_to_pastefy(text):
+    """Загружает текст в Pastefy, возвращает ссылку или None"""
+    try:
+        r = requests.post(
+            "https://pastefy.app/api/v2/paste",
+            headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
+            json={"content": text, "title": "from bot"},
+            timeout=20
+        )
+        data = r.json()
+        paste_id = data.get("paste", {}).get("id")
+        if paste_id:
+            return "https://pastefy.app/" + paste_id
+    except Exception:
+        pass
+    return None
 
 @bot.message_handler(func=lambda m: "http" in m.text)
 def handle_link(m):
@@ -54,7 +68,6 @@ def handle_link(m):
     markup.add(
         types.InlineKeyboardButton("📎 В raw", callback_data="to_raw"),
         types.InlineKeyboardButton("✂️ Без raw", callback_data="from_raw"),
-        types.InlineKeyboardButton("📋 Скопировать текст", callback_data="copy_text"),
         types.InlineKeyboardButton("📄 Отправить файлом", callback_data="send_file"),
         types.InlineKeyboardButton("📦 В Pastefy", callback_data="to_pastefy"),
         types.InlineKeyboardButton("🎮 В loadstring", callback_data="to_loadstring"),
@@ -72,20 +85,25 @@ def handle_button(c):
         bot.send_message(c.message.chat.id, to_raw(u))
     elif c.data == "from_raw":
         bot.send_message(c.message.chat.id, from_raw(u))
-    elif c.data == "copy_text":
-        text = fetch_text(u)
-        if len(text) > 4000:
-            text = text[:4000] + "\n...(обрезано)"
-        bot.send_message(c.message.chat.id, "```\n" + text + "\n```", parse_mode="Markdown")
     elif c.data == "send_file":
         text = fetch_text(u)
-        with open("/tmp/file.txt", "w", encoding="utf-8") as f:
-            f.write(text)
-        with open("/tmp/file.txt", "rb") as f:
-            bot.send_document(c.message.chat.id, f)
+        if text is None:
+            bot.send_message(c.message.chat.id, "Не удалось скачать содержимое")
+        else:
+            with open("/tmp/file.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            with open("/tmp/file.txt", "rb") as f:
+                bot.send_document(c.message.chat.id, f)
     elif c.data == "to_pastefy":
-        # Просто даём ссылку на просмотр
-        bot.send_message(c.message.chat.id, u.replace("/raw", ""))
+        text = fetch_text(u)
+        if text is None:
+            bot.send_message(c.message.chat.id, "Не удалось скачать содержимое")
+        else:
+            link = upload_to_pastefy(text)
+            if link:
+                bot.send_message(c.message.chat.id, "Готово: " + link)
+            else:
+                bot.send_message(c.message.chat.id, "Ошибка загрузки в Pastefy")
     elif c.data == "to_loadstring":
         bot.send_message(c.message.chat.id, 'loadstring(game:HttpGet("' + u + '"))()')
 
