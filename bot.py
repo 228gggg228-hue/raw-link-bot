@@ -7,6 +7,9 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
+# file_id гифки для команды /start
+START_GIF = "AAMCAgADGQEAAxJqyoRNT1n5x6lKCA0ikklRaqqq5QACY6cAAuwNUEqOcksKQpB00wEAB20AAz0E"
+
 links = {}
 files = {}
 paste_links = {}
@@ -55,7 +58,6 @@ def upload_to_pastefy(text):
     try:
         r = requests.post(
             "https://pastefy.app/api/v2/paste",
-            # headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
             json={"content": text, "title": "from bot", "visibility": "PUBLIC"},
             timeout=30
         )
@@ -70,6 +72,25 @@ def upload_to_pastefy(text):
         return "Нет ID в ответе: " + str(data)
     except Exception as e:
         return "Ошибка: " + str(e)
+
+# --- Команда /start ---
+@bot.message_handler(commands=["start"])
+def start_cmd(m):
+    try:
+        bot.send_animation(
+            m.chat.id,
+            START_GIF,
+            caption="Салами, Бибизьян!\nДаай мне ссилку скатина"
+        )
+    except Exception as e:
+        bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
+        bot.send_message(m.chat.id, "Ошибка с гифкой: " + str(e))
+
+# --- Ловушка для получения file_id (временно) ---
+@bot.message_handler(content_types=["animation"])
+def catch_gif(m):
+    print("FILE_ID:", m.animation.file_id)
+    bot.reply_to(m, "Поймал гифку. file_id записан в логи Railway.")
 
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
@@ -120,7 +141,6 @@ def handle_document(m):
 def handle_button(c):
     chat_id = c.message.chat.id
 
-    # --- Сохранение файла в Pastefy ---
     if c.data == "file_to_pastefy":
         text = files.get(chat_id)
         if not text:
@@ -139,7 +159,6 @@ def handle_button(c):
         bot.answer_callback_query(c.id)
         return
 
-    # --- Кнопки для ссылки на Pastefy ---
     if c.data == "paste_to_raw":
         u = paste_links.get(chat_id, "")
         if not u:
@@ -158,7 +177,6 @@ def handle_button(c):
         bot.answer_callback_query(c.id)
         return
 
-    # --- Обработка ссылок ---
     u = links.get(chat_id, "")
     if not u:
         bot.answer_callback_query(c.id, "Ссылка потерялась, отправь заново")
