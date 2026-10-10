@@ -11,6 +11,10 @@ links = {}
 files = {}
 paste_links = {}
 
+def text_stats(text):
+    lines = text.count("\n") + 1
+    return str(len(text)) + " символов, " + str(lines) + " строк"
+
 def to_raw(u):
     if "github.com" in u and "/blob/" in u:
         return u.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
@@ -46,15 +50,19 @@ def fetch_text(u):
         return None
 
 def upload_to_pastefy(text):
+    if len(text) > 500000:
+        return "❌ Файл слишком большой для Pastefy (" + str(len(text)) + " символов). Лимит ~500 000."
     try:
         r = requests.post(
             "https://pastefy.app/api/v2/paste",
             # headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
             json={"content": text, "title": "from bot", "visibility": "PUBLIC"},
-            timeout=20
+            timeout=30
         )
+        if r.status_code == 413:
+            return "❌ Pastefy отклонил файл: слишком большой (413)."
         if r.status_code >= 400:
-            return "Ошибка Pastefy: " + str(r.status_code) + " " + r.text
+            return "Ошибка Pastefy: " + str(r.status_code) + " " + r.text[:200]
         data = r.json()
         paste_id = data.get("paste", {}).get("id")
         if paste_id:
@@ -68,6 +76,13 @@ def upload_to_pastefy(text):
 def handle_link(m):
     u = m.text.strip()
     links[m.chat.id] = u
+
+    text = fetch_text(u)
+    if text is not None:
+        info = "Что сделать со ссылкой?\n📊 " + text_stats(text)
+    else:
+        info = "Что сделать со ссылкой?\n⚠️ Не удалось скачать содержимое"
+
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("📎 В raw", callback_data="to_raw"),
@@ -76,7 +91,7 @@ def handle_link(m):
         types.InlineKeyboardButton("📦 В Pastefy", callback_data="to_pastefy"),
         types.InlineKeyboardButton("🎮 В loadstring", callback_data="to_loadstring"),
     )
-    bot.reply_to(m, "Что сделать со ссылкой?", reply_markup=markup)
+    bot.reply_to(m, info, reply_markup=markup)
 
 # --- Обработка файлов ---
 @bot.message_handler(content_types=["document"])
@@ -95,7 +110,7 @@ def handle_document(m):
         markup.add(types.InlineKeyboardButton("📦 Сохранить в Pastefy", callback_data="file_to_pastefy"))
         bot.reply_to(
             m,
-            "Файл получен: " + m.document.file_name + " (" + str(len(text)) + " символов)\nСохранить содержимое в Pastefy?",
+            "Файл получен: " + m.document.file_name + "\n📊 " + text_stats(text) + "\nСохранить содержимое в Pastefy?",
             reply_markup=markup
         )
     except Exception as e:
