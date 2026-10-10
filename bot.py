@@ -49,7 +49,7 @@ def upload_to_pastefy(text):
     try:
         r = requests.post(
             "https://pastefy.app/api/v2/paste",
-            headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
+            # headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
             json={"content": text, "title": "from bot", "visibility": "PUBLIC"},
             timeout=20
         )
