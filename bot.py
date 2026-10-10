@@ -9,9 +9,9 @@ bot = telebot.TeleBot(TOKEN)
 
 # Гифки (старые file_id — после Revoke токена они могут не работать,
 # заменим после получения новых)
-START_GIF = "CgACAgQAAxkBAAIBSGrKlso5rjJ47atewYtu_v_WQs-SAAKRCQACtyAFUjcdOpAr2NpUPQQ"
-LINK_GIF  = "CgACAgIAAxkBAAIBSmrKltMDcQcRsJMmqYh_9Ze9DJCYAAKn1gAC8wmwSdmPt52u2ynnPQQ"
-FILE_GIF  = "CgACAgIAAxkBAAIBTGrKltckzqjYpVdTc-zkC_as8xzsAAKidQACy_xSOM5Nb99UNOwPQQ"
+START_GIF = "CgACAgQAAxkBAAEvn0NqypsN_J9-UXdmAef4nVCAaqAgZgACKQkAArcBVI3Kg7sT5lZoD0E"
+LINK_GIF  = "CgACAgIAAxkBAAEvn0Vqypsj8vvxxumpM0uMdc34JKt4VAACp5YAAvMJsElp9ZAhERb2iT0E"
+FILE_GIF  = "CgACAgIAAxkBAAEvn0lqyps9sf91ReJb1NuEE10wF629BgAAnUAAisv8Ugs2rgz7B9teD0E"
 
 links = {}
 files = {}
