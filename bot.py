@@ -9,7 +9,7 @@ bot = telebot.TeleBot(TOKEN)
 
 links = {}
 files = {}
-paste_links = {}  # здесь храним ссылки на пасты по chat_id
+paste_links = {}
 
 def to_raw(u):
     if "github.com" in u and "/blob/" in u:
@@ -113,7 +113,6 @@ def handle_button(c):
             return
         result = upload_to_pastefy(text)
         bot.send_message(chat_id, result)
-        # Если получилась ссылка — сохраняем и показываем кнопки
         if result.startswith("https://pastefy.app/"):
             paste_links[chat_id] = result
             markup = types.InlineKeyboardMarkup(row_width=2)
@@ -171,7 +170,17 @@ def handle_button(c):
             result = upload_to_pastefy(text)
             bot.send_message(chat_id, result)
     elif c.data == "to_loadstring":
-        bot.send_message(chat_id, 'loadstring(game:HttpGet("' + u + '"))()')
+        raw_url = u
+        if "pastefy.app" in raw_url and "/raw" not in raw_url:
+            raw_url = raw_url.rstrip("/") + "/raw"
+        elif "github.com" in raw_url and "/blob/" in raw_url:
+            raw_url = raw_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        elif "pastebin.com" in raw_url and "/raw/" not in raw_url:
+            p = raw_url.rstrip("/").split("/")
+            raw_url = "https://pastebin.com/raw/" + p[-1]
+        elif "gitlab.com" in raw_url and "/-/blob/" in raw_url:
+            raw_url = raw_url.replace("/-/blob/", "/-/raw/")
+        bot.send_message(chat_id, 'loadstring(game:HttpGet("' + raw_url + '"))()')
 
     bot.answer_callback_query(c.id)
 
