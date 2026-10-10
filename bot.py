@@ -7,8 +7,14 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# file_id гифки для команды /start
+# Гифка для команды /start
 START_GIF = "CgACAgQAAxkBAAP8asqG53wCcnDFqLnxEzCwCNPEzYAaPpEJAAK3IAVSNx06kCvY21Q9BA"
+
+# Гифка при отправке ссылки
+LINK_GIF = "CgACAgIAAxkBAAIBGGrKjyjSjICCboqfmnxh3BHW-MVLAAKn1gAC8wmwSdmPt52u2ynnPQQ"
+
+# Гифка при отправке файла
+FILE_GIF = "CgACAgIAAxkBAAIBHGrKj_kpatzljwT2nTR4A_5Q-8QAAkidQACy_xSOM5Nb99UNOwPQQ"
 
 links = {}
 files = {}
@@ -86,22 +92,6 @@ def start_cmd(m):
         bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
         bot.send_message(m.chat.id, "Ошибка с гифкой: " + str(e))
 
-# --- Ловушка для получения file_id (временно) ---
-@bot.message_handler(content_types=["animation", "video", "document", "video_note"])
-def catch_gif(m):
-    if m.animation:
-        print("FILE_ID_ANIMATION:", m.animation.file_id)
-        bot.reply_to(m, "Поймал animation. ID записан в логи Railway.")
-    elif m.video:
-        print("FILE_ID_VIDEO:", m.video.file_id)
-        bot.reply_to(m, "Поймал video. ID записан в логи Railway.")
-    elif m.video_note:
-        print("FILE_ID_VIDEO_NOTE:", m.video_note.file_id)
-        bot.reply_to(m, "Поймал video_note. ID записан в логи Railway.")
-    elif m.document:
-        print("FILE_ID_DOCUMENT:", m.document.file_id)
-        bot.reply_to(m, "Поймал document. ID записан в логи Railway.")
-
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
 def handle_link(m):
@@ -122,6 +112,10 @@ def handle_link(m):
         types.InlineKeyboardButton("📦 В Pastefy", callback_data="to_pastefy"),
         types.InlineKeyboardButton("🎮 В loadstring", callback_data="to_loadstring"),
     )
+    try:
+        bot.send_animation(m.chat.id, LINK_GIF)
+    except Exception:
+        pass
     bot.reply_to(m, info, reply_markup=markup)
 
 # --- Обработка документов (файлов) ---
@@ -136,6 +130,11 @@ def handle_document(m):
             text = file_bytes.decode("latin-1", errors="ignore")
 
         files[m.chat.id] = text
+
+        try:
+            bot.send_animation(m.chat.id, FILE_GIF)
+        except Exception:
+            pass
 
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("📦 Сохранить в Pastefy", callback_data="file_to_pastefy"))
