@@ -8,6 +8,7 @@ PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 links = {}
+files = {}  # здесь храним содержимое присланных файлов по chat_id
 
 def to_raw(u):
     if "github.com" in u and "/blob/" in u:
@@ -40,27 +41,29 @@ def fetch_text(u):
         r = requests.get(u, timeout=15)
         r.raise_for_status()
         return r.text
-    except Exception as e:
+    except Exception:
         return None
 
 def upload_to_pastefy(text):
-    """Загружает текст в Pastefy, возвращает ссылку или None"""
     try:
         r = requests.post(
             "https://pastefy.app/api/v2/paste",
             headers={"Authorization": "Bearer " + PASTEFY_TOKEN},
-            json={"content": text, "title": "from bot"},
+            json={"content": text, "title": "from bot", "visibility": "PUBLIC"},
             timeout=20
         )
+        if r.status_code >= 400:
+            return "Ошибка Pastefy: " + str(r.status_code) + " " + r.text
         data = r.json()
         paste_id = data.get("paste", {}).get("id")
         if paste_id:
             return "https://pastefy.app/" + paste_id
-    except Exception:
-        pass
-    return None
+        return "Нет ID в ответе: " + str(data)
+    except Exception as e:
+        return "Ошибка: " + str(e)
 
-@bot.message_handler(func=lambda m: "http" in m.text)
+# --- Обработка ссылок ---
+@bot.message_handler(func=lambda m: m.text and "http" in m.text)
 def handle_link(m):
     u = m.text.strip()
     links[m.chat.id] = u
@@ -74,38 +77,72 @@ def handle_link(m):
     )
     bot.reply_to(m, "Что сделать со ссылкой?", reply_markup=markup)
 
+# --- Обработка файлов ---
+@bot.message_handler(content_types=["document"])
+def handle_document(m):
+    try:
+        file_info = bot.get_file(m.document.file_id)
+        file_bytes = bot.download_file(file_info.file_path)
+        try:
+            text = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            text = file_bytes.decode("latin-1", errors="ignore")
+
+        files[m.chat.id] = text
+
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("📦 Сохранить в Pastefy", callback_data="file_to_pastefy"))
+        bot.reply_to(
+            m,
+            "Файл получен: " + m.document.file_name + " (" + str(len(text)) + " символов)\nСохранить содержимое в Pastefy?",
+            reply_markup=markup
+        )
+    except Exception as e:
+        bot.reply_to(m, "Не удалось обработать файл: " + str(e))
+
 @bot.callback_query_handler(func=lambda c: True)
 def handle_button(c):
-    u = links.get(c.message.chat.id, "")
+    chat_id = c.message.chat.id
+
+    # --- Обработка файла ---
+    if c.data == "file_to_pastefy":
+        text = files.get(chat_id)
+        if not text:
+            bot.answer_callback_query(c.id, "Файл потерялся, отправь заново")
+            return
+        result = upload_to_pastefy(text)
+        bot.send_message(chat_id, result)
+        bot.answer_callback_query(c.id)
+        return
+
+    # --- Обработка ссылки ---
+    u = links.get(chat_id, "")
     if not u:
         bot.answer_callback_query(c.id, "Ссылка потерялась, отправь заново")
         return
 
     if c.data == "to_raw":
-        bot.send_message(c.message.chat.id, to_raw(u))
+        bot.send_message(chat_id, to_raw(u))
     elif c.data == "from_raw":
-        bot.send_message(c.message.chat.id, from_raw(u))
+        bot.send_message(chat_id, from_raw(u))
     elif c.data == "send_file":
         text = fetch_text(u)
         if text is None:
-            bot.send_message(c.message.chat.id, "Не удалось скачать содержимое")
+            bot.send_message(chat_id, "Не удалось скачать содержимое")
         else:
             with open("/tmp/file.txt", "w", encoding="utf-8") as f:
                 f.write(text)
             with open("/tmp/file.txt", "rb") as f:
-                bot.send_document(c.message.chat.id, f)
+                bot.send_document(chat_id, f)
     elif c.data == "to_pastefy":
         text = fetch_text(u)
         if text is None:
-            bot.send_message(c.message.chat.id, "Не удалось скачать содержимое")
+            bot.send_message(chat_id, "Не удалось скачать содержимое")
         else:
-            link = upload_to_pastefy(text)
-            if link:
-                bot.send_message(c.message.chat.id, "Готово: " + link)
-            else:
-                bot.send_message(c.message.chat.id, "Ошибка загрузки в Pastefy")
+            result = upload_to_pastefy(text)
+            bot.send_message(chat_id, result)
     elif c.data == "to_loadstring":
-        bot.send_message(c.message.chat.id, 'loadstring(game:HttpGet("' + u + '"))()')
+        bot.send_message(chat_id, 'loadstring(game:HttpGet("' + u + '"))()')
 
     bot.answer_callback_query(c.id)
 
