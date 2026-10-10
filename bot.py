@@ -8,7 +8,8 @@ PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 links = {}
-files = {}  # здесь храним содержимое присланных файлов по chat_id
+files = {}
+paste_links = {}  # здесь храним ссылки на пасты по chat_id
 
 def to_raw(u):
     if "github.com" in u and "/blob/" in u:
@@ -104,7 +105,7 @@ def handle_document(m):
 def handle_button(c):
     chat_id = c.message.chat.id
 
-    # --- Обработка файла ---
+    # --- Сохранение файла в Pastefy ---
     if c.data == "file_to_pastefy":
         text = files.get(chat_id)
         if not text:
@@ -112,10 +113,38 @@ def handle_button(c):
             return
         result = upload_to_pastefy(text)
         bot.send_message(chat_id, result)
+        # Если получилась ссылка — сохраняем и показываем кнопки
+        if result.startswith("https://pastefy.app/"):
+            paste_links[chat_id] = result
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton("📎 Сделать raw", callback_data="paste_to_raw"),
+                types.InlineKeyboardButton("🎮 Сделать loadstring", callback_data="paste_to_loadstring"),
+            )
+            bot.send_message(chat_id, "Что сделать с этой ссылкой?", reply_markup=markup)
         bot.answer_callback_query(c.id)
         return
 
-    # --- Обработка ссылки ---
+    # --- Кнопки для ссылки на Pastefy ---
+    if c.data == "paste_to_raw":
+        u = paste_links.get(chat_id, "")
+        if not u:
+            bot.answer_callback_query(c.id, "Ссылка потерялась")
+            return
+        bot.send_message(chat_id, u + "/raw")
+        bot.answer_callback_query(c.id)
+        return
+
+    if c.data == "paste_to_loadstring":
+        u = paste_links.get(chat_id, "")
+        if not u:
+            bot.answer_callback_query(c.id, "Ссылка потерялась")
+            return
+        bot.send_message(chat_id, 'loadstring(game:HttpGet("' + u + '/raw"))()')
+        bot.answer_callback_query(c.id)
+        return
+
+    # --- Обработка ссылок ---
     u = links.get(chat_id, "")
     if not u:
         bot.answer_callback_query(c.id, "Ссылка потерялась, отправь заново")
