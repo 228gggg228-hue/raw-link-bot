@@ -8,7 +8,7 @@ PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 # file_id гифки для команды /start
-START_GIF = "AAMCAgADGQEAAxJqyoRNT1n5x6lKCA0ikklRaqqq5QACY6cAAuwNUEqOcksKQpB00wEAB20AAz0E"
+START_GIF = "CgACAgQAAxkBAAP8asqG53wCcnDFqLnxEzCwCNPEzYAaPpEJAAK3IAVSNx06kCvY21Q9BA"
 
 links = {}
 files = {}
