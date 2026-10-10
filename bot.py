@@ -87,10 +87,20 @@ def start_cmd(m):
         bot.send_message(m.chat.id, "Ошибка с гифкой: " + str(e))
 
 # --- Ловушка для получения file_id (временно) ---
-@bot.message_handler(content_types=["animation"])
+@bot.message_handler(content_types=["animation", "video", "document", "video_note"])
 def catch_gif(m):
-    print("FILE_ID:", m.animation.file_id)
-    bot.reply_to(m, "Поймал гифку. file_id записан в логи Railway.")
+    if m.animation:
+        print("FILE_ID_ANIMATION:", m.animation.file_id)
+        bot.reply_to(m, "Поймал animation. ID записан в логи Railway.")
+    elif m.video:
+        print("FILE_ID_VIDEO:", m.video.file_id)
+        bot.reply_to(m, "Поймал video. ID записан в логи Railway.")
+    elif m.video_note:
+        print("FILE_ID_VIDEO_NOTE:", m.video_note.file_id)
+        bot.reply_to(m, "Поймал video_note. ID записан в логи Railway.")
+    elif m.document:
+        print("FILE_ID_DOCUMENT:", m.document.file_id)
+        bot.reply_to(m, "Поймал document. ID записан в логи Railway.")
 
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
@@ -114,7 +124,7 @@ def handle_link(m):
     )
     bot.reply_to(m, info, reply_markup=markup)
 
-# --- Обработка файлов ---
+# --- Обработка документов (файлов) ---
 @bot.message_handler(content_types=["document"])
 def handle_document(m):
     try:
