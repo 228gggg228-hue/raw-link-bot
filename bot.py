@@ -7,11 +7,10 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# Гифки (старые file_id — после Revoke токена они могут не работать,
-# заменим после получения новых)
-START_GIF = "CgACAgQAAxkBAAEvn0NqypsN_J9-UXdmAef4nVCAaqAgZgACKQkAArcBVI3Kg7sT5lZoD0E"
-LINK_GIF  = "CgACAgIAAxkBAAEvn0Vqypsj8vvxxumpM0uMdc34JKt4VAACp5YAAvMJsElp9ZAhERb2iT0E"
-FILE_GIF  = "CgACAgIAAxkBAAEvn0lqyps9sf91ReJb1NuEE10wF629BgAAnUAAisv8Ugs2rgz7B9teD0E"
+# Гифки
+START_GIF = "CgACAgQAAxkBAAEvn0NqypsN_J9-UXdmAef4nVCAaqAgZgACkQkAArcgBVI3Kg7sT5lZoD0E"
+LINK_GIF  = "AAMCAgADGQEAAS-fRWrKmyPy-_HG6akw64x1zfgkq3hUAAKnlgAC8wmwSWn1kCERFvaJAQAHbQADPQQ"
+FILE_GIF  = "AAMCAgADGQEAAS-fSWrKmz2x_3VF4lvU24QTVDAXrb0GAAKidQACKy_xSCzauDPsH214AQAHbQADPQQ"
 
 links = {}
 files = {}
@@ -88,23 +87,6 @@ def start_cmd(m):
     except Exception as e:
         bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
         bot.send_message(m.chat.id, "Ошибка с гифкой: " + str(e))
-
-# --- ВРЕМЕННАЯ ЛОВУШКА для получения file_id ---
-# После того, как получим свежие file_id, этот блок нужно будет удалить
-@bot.message_handler(content_types=["animation", "video", "document", "video_note"])
-def catch_gif(m):
-    if m.animation:
-        print("FILE_ID_ANIMATION:", m.animation.file_id)
-        bot.reply_to(m, "Поймал animation. ID в логах Railway.")
-    elif m.video:
-        print("FILE_ID_VIDEO:", m.video.file_id)
-        bot.reply_to(m, "Поймал video. ID в логах Railway.")
-    elif m.video_note:
-        print("FILE_ID_VIDEO_NOTE:", m.video_note.file_id)
-        bot.reply_to(m, "Поймал video_note. ID в логах Railway.")
-    elif m.document:
-        print("FILE_ID_DOCUMENT:", m.document.file_id)
-        bot.reply_to(m, "Поймал document. ID в логах Railway.")
 
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
