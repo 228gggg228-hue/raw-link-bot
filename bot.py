@@ -23,7 +23,7 @@ def log_action(user, action, detail=""):
     """Отправляет уведомление админу о действии пользователя"""
     try:
         if user.id == ADMIN_ID:
-            return  # свои действия не логируем
+            return
         name = user.first_name or ""
         username = "@" + user.username if user.username else "(нет username)"
         uid = user.id
@@ -37,12 +37,6 @@ def log_action(user, action, detail=""):
         pass
 
 def menu_keyboard():
-    """Reply-клавиатура с кнопкой '☰ Меню'"""
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
-    markup.add(types.KeyboardButton("☰ Меню"))
-    return markup
-
-def main_menu_keyboard():
     """Reply-клавиатура с кнопкой '🏠 Главное меню'"""
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     markup.add(types.KeyboardButton("🏠 Главное меню"))
@@ -114,16 +108,15 @@ def start_cmd(m):
         bot.send_animation(
             m.chat.id,
             START_GIF,
-            caption="Салами, Бибизьян!\nДаай мне ссилку скатина"
+            caption="Салами, Бибизьян!\nДаай мне ссилку скатина",
+            reply_markup=menu_keyboard()
         )
     except Exception:
-        bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
-    bot.send_message(m.chat.id, "👇 Используй кнопку ниже", reply_markup=menu_keyboard())
-
-# --- Reply-кнопка: ☰ Меню ---
-@bot.message_handler(func=lambda m: m.text == "☰ Меню")
-def show_menu(m):
-    bot.send_message(m.chat.id, "👇", reply_markup=main_menu_keyboard())
+        bot.send_message(
+            m.chat.id,
+            "Салами, Бибизьян!\nДаай мне ссилку скатина",
+            reply_markup=menu_keyboard()
+        )
 
 # --- Reply-кнопка: 🏠 Главное меню (аналог /start) ---
 @bot.message_handler(func=lambda m: m.text == "🏠 Главное меню")
@@ -132,11 +125,15 @@ def main_menu(m):
         bot.send_animation(
             m.chat.id,
             START_GIF,
-            caption="Салами, Бибизьян!\nДаай мне ссилку скатина"
+            caption="Салами, Бибизьян!\nДаай мне ссилку скатина",
+            reply_markup=menu_keyboard()
         )
     except Exception:
-        bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
-    bot.send_message(m.chat.id, "👇 Используй кнопку ниже", reply_markup=menu_keyboard())
+        bot.send_message(
+            m.chat.id,
+            "Салами, Бибизьян!\nДаай мне ссилку скатина",
+            reply_markup=menu_keyboard()
+        )
 
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
