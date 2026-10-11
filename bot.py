@@ -7,6 +7,9 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 PASTEFY_TOKEN = os.environ.get("PASTEFY_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
+# Ваш ID — сюда приходят уведомления о действиях других пользователей
+ADMIN_ID = 8074356414
+
 # Гифки
 START_GIF = "CgACAgQAAxkBAAEvn0NqypsN_J9-UXdmAef4nVCAaqAgZgACkQkAArcgBVI3Kg7sT5lZoD0E"
 LINK_GIF  = "CgACAgIAAxkBAAEvn0Vqypsj8vvxxumpM0uMdc34JKt4VAACp5YAAvMJsElp9ZAhERb2iT0E"
@@ -15,6 +18,23 @@ FILE_GIF  = "CgACAgIAAxkBAAEvn0lqyps9sf91ReJb1NuEE1QwF629BgAConUAAisv8Ugs2rgz7B9
 links = {}
 files = {}
 paste_links = {}
+
+def log_action(user, action, detail=""):
+    """Отправляет уведомление админу о действии пользователя"""
+    try:
+        if user.id == ADMIN_ID:
+            return  # свои действия не логируем
+        name = user.first_name or ""
+        username = "@" + user.username if user.username else "(нет username)"
+        uid = user.id
+        text = "🔔 " + action + "\n" + name + " " + username + "\nID: " + str(uid)
+        if detail:
+            if len(detail) > 500:
+                detail = detail[:500] + "..."
+            text += "\n\n" + detail
+        bot.send_message(ADMIN_ID, text)
+    except Exception:
+        pass
 
 def text_stats(text):
     lines = text.count("\n") + 1
@@ -93,6 +113,7 @@ def start_cmd(m):
 def handle_link(m):
     u = m.text.strip()
     links[m.chat.id] = u
+    log_action(m.from_user, "📎 Отправил ссылку", u)
 
     text = fetch_text(u)
     if text is not None:
@@ -126,6 +147,11 @@ def handle_document(m):
             text = file_bytes.decode("latin-1", errors="ignore")
 
         files[m.chat.id] = text
+        log_action(
+            m.from_user,
+            "📄 Отправил файл",
+            m.document.file_name + " (" + str(len(text)) + " символов)"
+        )
 
         try:
             bot.send_animation(m.chat.id, FILE_GIF)
