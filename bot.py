@@ -36,6 +36,18 @@ def log_action(user, action, detail=""):
     except Exception:
         pass
 
+def menu_keyboard():
+    """Reply-клавиатура с кнопкой '☰ Меню'"""
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+    markup.add(types.KeyboardButton("☰ Меню"))
+    return markup
+
+def main_menu_keyboard():
+    """Reply-клавиатура с кнопкой '🏠 Главное меню'"""
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+    markup.add(types.KeyboardButton("🏠 Главное меню"))
+    return markup
+
 def text_stats(text):
     lines = text.count("\n") + 1
     return str(len(text)) + " символов, " + str(lines) + " строк"
@@ -104,9 +116,27 @@ def start_cmd(m):
             START_GIF,
             caption="Салами, Бибизьян!\nДаай мне ссилку скатина"
         )
-    except Exception as e:
+    except Exception:
         bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
-        bot.send_message(m.chat.id, "Ошибка с гифкой: " + str(e))
+    bot.send_message(m.chat.id, "👇 Используй кнопку ниже", reply_markup=menu_keyboard())
+
+# --- Reply-кнопка: ☰ Меню ---
+@bot.message_handler(func=lambda m: m.text == "☰ Меню")
+def show_menu(m):
+    bot.send_message(m.chat.id, "👇", reply_markup=main_menu_keyboard())
+
+# --- Reply-кнопка: 🏠 Главное меню (аналог /start) ---
+@bot.message_handler(func=lambda m: m.text == "🏠 Главное меню")
+def main_menu(m):
+    try:
+        bot.send_animation(
+            m.chat.id,
+            START_GIF,
+            caption="Салами, Бибизьян!\nДаай мне ссилку скатина"
+        )
+    except Exception:
+        bot.send_message(m.chat.id, "Салами, Бибизьян!\nДаай мне ссилку скатина")
+    bot.send_message(m.chat.id, "👇 Используй кнопку ниже", reply_markup=menu_keyboard())
 
 # --- Обработка ссылок ---
 @bot.message_handler(func=lambda m: m.text and "http" in m.text)
